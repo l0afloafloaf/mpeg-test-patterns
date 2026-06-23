@@ -2,7 +2,7 @@
 
 MPEG TEST PATTERNS is single-page website that loops and tiles a selection of video files which have all been used as source/test material for the development of video compression protocols.
 
-View the website here: [https://l0afloafloaf.github.io/mpeg-test-patterns/]
+View the website here: https://l0afloafloaf.github.io/mpeg-test-patterns/
 
 Viewed best in full screen (cmd+f in chrome/mac), and waiting a while to see what happens. 
 
