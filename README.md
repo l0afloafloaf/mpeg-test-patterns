@@ -4,7 +4,7 @@ MPEG TEST PATTERNS is single-page website that loops and tiles a selection of vi
 
 View the website here: https://l0afloafloaf.github.io/mpeg-test-patterns/
 
-Viewed best in full screen (cmd+f in chrome/mac), and waiting a while to see what happens. 
+Viewed best in full screen on a desktop browser and waiting a while to see what happens. 
 
 ---
 
