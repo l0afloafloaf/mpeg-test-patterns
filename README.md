@@ -1,8 +1,14 @@
 ## MPEG TEST PATTERNS
 
-This is a single-page website that loops and tiles a selection of video files, all known for their use as source/test material for the development of video compression protocols. This is an experiment in display and following an interest in standards, compression and image into data. 
+MPEG TEST PATTERNS is single-page website that loops and tiles a selection of video files which have all been used as source/test material for the development of video compression protocols.
 
-This is entirely vibe coded. Videos tile larger based on chance and videos repeat and loop based on incremental chance. 
+View the website here: [https://l0afloafloaf.github.io/mpeg-test-patterns/]
+
+Viewed best in full screen (cmd+f in chrome/mac), and waiting a while to see what happens. 
+
+---
+
+This is an experiment in display and following an interest in standards, compression and image into data. It is entirely vibe coded. Videos tile larger based on chance and videos repeat and loop based on incremental chance. 
 
 Most video files have been sourced from xiph: https://media.xiph.org/video/derf/
 
