@@ -28,7 +28,6 @@
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             grid-template-rows: repeat(3, 1fr);
-            grid-auto-flow: dense;
             gap: 4px;
             padding: 4px;
         }
@@ -45,10 +44,22 @@
             grid-column: span 2;
             grid-row: span 2;
         }
+        
+        /* Fixed Grid Coordinates for the 9-Cell Takeover Layout */
         .tile.giant-nine {
-            grid-column: span 3;
-            grid-row: span 3;
+            grid-row: 1 / span 3;
         }
+        .tile.giant-left {
+            grid-column: 1 / span 3;
+        }
+        .tile.giant-right {
+            grid-column: 2 / span 3;
+        }
+        .tile.small-sidebar {
+            grid-column: span 1;
+            grid-row: span 1;
+        }
+
         video {
             width: 100%;
             height: 100%;
@@ -62,26 +73,53 @@
     <div class="collage-container" id="grid"></div>
 
     <script>
+        // =========================================================================
+        // 🎛️ ARTWORK CONFIGURATION PANEL
+        // =========================================================================
+        const CONFIG = {
+            // Folder Path Adjustments
+            videoDirectory: 'videos/',       // Folder where your video collection lives
+            
+            // Layout Evolution Intervals
+            maxTilesUniform: 12,              // Standard grid capacity (Do not change for 4x3 grid)
+            triggerEveryXChanges: 15,         // Number of normal video switches before a new layout rolls
+            
+            // Random Start Timing Caps
+            maxInitialOffsetSeconds: 5,       // Maximum seconds a video can skip forward on startup
+            
+            // Core Probability Modifiers (values between 0.0 and 1.0)
+            echoTakeoverChance: 0.30,         // 30% chance for an Echo event on layout change
+            giantLayoutChance: 0.60,          // 60% chance to mutate layout if Echo doesn't hit
+            nineCellTakeoverChance: 0.1,      // 10% chance for ninecell
+            
+            // Echo Fill Distribution Variables
+            echoMinPercent: 0.6,             // Minimum percentage of tiles to flood during Echo
+            echoMaxPercent: 1.00,             // Maximum percentage of tiles to flood during Echo
+            
+            // Fine-Tuning Multi-Tier Clip Looping Rules
+            loopDurationCutoffSeconds: 5.0,   // Videos shorter than this qualify for stutter loops
+            loopProbabilities: {
+                play2: 0.90,                  // 90% chance to loop a 2nd time
+                play3: 0.70,                  // 70% chance to loop a 3rd time
+                play4: 0.50,                  // 50% chance to loop a 4th time
+                play5: 0.30                   // 30% chance to loop a 5th time
+            }
+        };
+
+        // =========================================================================
+        // ⚙️ SYSTEM STATES & CONTROLLERS (Core Mechanics)
+        // =========================================================================
         const gridContainer = document.getElementById('grid');
         let allTiles = []; 
-        
-        const maxTilesUniform = 12;
-        
-        // --- PROBABILITY CONFIGURATION ---
         let changeCounter = 0;
-        const triggerEveryXChanges = 15; 
-        const giantLayoutChance = 0.7;   
-        const nineCellTakeoverChance = 0.1; 
-        const echoTakeoverChance = 0.3; 
-        
         let wasLastLayoutGiant = false;
         let lastGiantIndex = -1;
-        
-        let pendingLayoutChange = null; 
+        let pendingLayoutChange = null; // Memory queue mapping future structural layouts
 
         function getRandomVideo() {
-            const randomIndex = Math.floor(Math.random() * videoSourcePool.length); return 'videos/' + videoSourcePool[randomIndex];
-            }
+            const randomIndex = Math.floor(Math.random() * videoSourcePool.length);
+            return CONFIG.videoDirectory + videoSourcePool[randomIndex];
+        }
 
         function createTileElement() {
             const tile = document.createElement('div');
@@ -96,28 +134,35 @@
             let loopCounter = 1;
 
             video.addEventListener('loadedmetadata', function() {
-                const randomStart = Math.random() * Math.min(5, this.duration);
+                const randomStart = Math.random() * Math.min(CONFIG.maxInitialOffsetSeconds, this.duration);
                 this.currentTime = randomStart;
             }, { once: true });
 
             video.addEventListener('ended', function() {
-                if (this.duration < 5.0) {
+                // Multi-tiered looping mechanics processing block
+                if (this.duration < CONFIG.loopDurationCutoffSeconds) {
                     let shouldLoop = false;
-                    if (loopCounter === 1 && Math.random() < 0.90) shouldLoop = true; 
-                    else if (loopCounter === 2 && Math.random() < 0.70) shouldLoop = true; 
-                    else if (loopCounter === 3 && Math.random() < 0.50) shouldLoop = true; 
-                    else if (loopCounter === 4 && Math.random() < 0.30) shouldLoop = true; 
+                    const probs = CONFIG.loopProbabilities;
+                    
+                    if (loopCounter === 1 && Math.random() < probs.play2) shouldLoop = true; 
+                    else if (loopCounter === 2 && Math.random() < probs.play3) shouldLoop = true; 
+                    else if (loopCounter === 3 && Math.random() < probs.play4) shouldLoop = true; 
+                    else if (loopCounter === 4 && Math.random() < probs.play5) shouldLoop = true; 
 
                     if (shouldLoop) {
                         loopCounter++;
                         this.currentTime = 0; 
                         this.play().catch(() => {});
-                        return; 
+                        return; // Halt process here to execute loop within this frame asset
                     }
                 }
 
                 loopCounter = 1;
 
+                // Check if this specific tile is currently acting as a Giant asset
+                const isGiantTile = tile.classList.contains('giant') || tile.classList.contains('giant-nine');
+
+                // Process Echo queue updates first if applicable
                 if (tile.dataset.pendingEchoSrc) {
                     this.src = tile.dataset.pendingEchoSrc;
                     delete tile.dataset.pendingEchoSrc;
@@ -126,12 +171,20 @@
                 }
                 this.play().catch(e => console.log("Playback error:", e));
 
-                changeCounter++;
-                if (changeCounter >= triggerEveryXChanges) {
+                // Smart Layout Triggering Rule:
+                // If a giant video finishes its run, instantly force a new layout transformation.
+                if (isGiantTile) {
                     changeCounter = 0; 
                     generateNextLayoutAction(); 
+                } else {
+                    changeCounter++;
+                    if (changeCounter >= CONFIG.triggerEveryXChanges) {
+                        changeCounter = 0; 
+                        generateNextLayoutAction(); 
+                    }
                 }
 
+                // THE QUEUE COMMAND DEPLOYMENT: Enforces structural alterations to wait for ends of streams
                 if (pendingLayoutChange) {
                     executeQueuedLayout(pendingLayoutChange);
                     pendingLayoutChange = null; 
@@ -150,10 +203,20 @@
         }
 
         function generateNextLayoutAction() {
-            if (Math.random() < echoTakeoverChance) {
+            // Anti-Repetition Rule: If the last layout was a Giant variety, force a structural mix up
+            if (wasLastLayoutGiant) {
+                if (Math.random() < 0.5) {
+                    pendingLayoutChange = { type: 'RESET_UNIFORM' };
+                } else {
+                    pendingLayoutChange = { type: 'ECHO', echoSrc: getRandomVideo() };
+                }
+                return;
+            }
+
+            if (Math.random() < CONFIG.echoTakeoverChance) {
                 pendingLayoutChange = { type: 'ECHO', echoSrc: getRandomVideo() };
-            } else if (Math.random() < giantLayoutChance) {
-                if (Math.random() < nineCellTakeoverChance) {
+            } else if (Math.random() < CONFIG.giantLayoutChance) {
+                if (Math.random() < CONFIG.nineCellTakeoverChance) {
                     pendingLayoutChange = { type: 'GIANT_NINE' }; 
                 } else {
                     pendingLayoutChange = { type: 'GIANT_2X2' };
@@ -164,8 +227,9 @@
         }
 
         function executeQueuedLayout(action) {
+            // Wipes ALL layout modifications clean so nothing gets stuck on a layout reset
             allTiles.forEach(tile => {
-                tile.classList.remove('giant', 'giant-nine');
+                tile.className = 'tile'; 
                 tile.style.display = 'flex';
                 const vid = tile.querySelector('video');
                 if (vid) {
@@ -178,10 +242,8 @@
                 let tilesToEcho = [...allTiles];
                 shuffleArray(tilesToEcho);
                 
-                const minPercent = 0.65;
-                const maxPercent = 1.00;
                 const randomCurve = Math.pow(Math.random(), 2);
-                const chosenPercentage = minPercent + randomCurve * (maxPercent - minPercent);
+                const chosenPercentage = CONFIG.echoMinPercent + randomCurve * (CONFIG.echoMaxPercent - CONFIG.echoMinPercent);
                 const targetCount = Math.floor(tilesToEcho.length * chosenPercentage);
 
                 tilesToEcho.forEach((tile, index) => {
@@ -199,7 +261,7 @@
                 lastGiantIndex = -1;
 
                 const giantVid = targetGiantTile.querySelector('video');
-                if (giantVid) giantVid.playbackRate = 0.2;
+                if (giantVid) giantVid.playbackRate = 0.5;
 
                 let hiddenCount = 0;
                 let remainingTiles = [];
@@ -210,6 +272,7 @@
                             tile.style.display = 'none';
                             hiddenCount++;
                         } else {
+                            tile.classList.add('small-sidebar');
                             remainingTiles.push(tile); 
                         }
                     }
@@ -217,9 +280,11 @@
 
                 gridContainer.innerHTML = '';
                 if (Math.random() < 0.5) {
+                    targetGiantTile.classList.add('giant-left');
                     gridContainer.appendChild(targetGiantTile);
                     remainingTiles.forEach(tile => gridContainer.appendChild(tile));
                 } else {
+                    targetGiantTile.classList.add('giant-right');
                     remainingTiles.forEach(tile => gridContainer.appendChild(tile));
                     gridContainer.appendChild(targetGiantTile);
                 }
@@ -259,7 +324,8 @@
             }
         }
 
-        for (let i = 0; i < maxTilesUniform; i++) {
+        // Initialize standard grid components instantly
+        for (let i = 0; i < CONFIG.maxTilesUniform; i++) {
             const tile = createTileElement();
             allTiles.push(tile);
             gridContainer.appendChild(tile);
