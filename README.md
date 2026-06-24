@@ -33,7 +33,7 @@ I am particularly interested in a couple of the clips such as "flower_garden" an
    * info inclusive of filename, year of origin, frames, resolution, source, readme, other info from XIPH, or known use in different protocols(?) if i can find this info
    * could be displayed in an overlay when mousing over a tile, or could be contained in a static page/floating display activated when 'clicking' on the tile, or clicking '(i)'
  * [ ] other click/interactivity behaviour, such as:
-   * [ ] clicking on a tile will causes video to 'echo' and spread across other tiles
+   * [ ] clicking on a tile causes video to 'echo' across other tiles
    * [ ] clicking forces giant (2x2 tiles) or 9cell layout, or randomly cues other chance layout/speed operations
 
 Noting that any overlays should only appear with mouse movement, default appearance should be simply tiled videos
