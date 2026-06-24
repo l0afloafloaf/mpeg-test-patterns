@@ -95,10 +95,11 @@
             // SKEW DIALS: Higher numbers = stronger preference for target speed
             normalTileSkewExponent: 3.0,
             nineCellTileSkewExponent: 2.0,
+            echoCurve: 1.5,
             
             // Core Probability Modifiers (values between 0.0 and 1.0)
-            echoTakeoverChance: 0.35,         
-            giantLayoutChance: 0.65,          
+            echoTakeoverChance: 0.4,         
+            giantLayoutChance: 0.7,          
             nineCellTakeoverChance: 0.05,      
                         
             echoMinPercent: 0.6,             
@@ -276,7 +277,7 @@
                 let tilesToEcho = [...allTiles];
                 shuffleArray(tilesToEcho);
                 
-                const randomCurve = Math.pow(Math.random(), 2);
+                const randomCurve = Math.pow(Math.random(), CONFIG.echoCurve);
                 const chosenPercentage = CONFIG.echoMinPercent + randomCurve * (CONFIG.echoMaxPercent - CONFIG.echoMinPercent);
                 const targetCount = Math.floor(tilesToEcho.length * chosenPercentage);
 
