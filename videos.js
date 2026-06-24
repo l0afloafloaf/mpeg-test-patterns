@@ -16,7 +16,6 @@ const videoSourcePool = [
   "flower_garden_422_ntsc.mp4",
   "football_422_ntsc.mp4",
   "football_cif.mp4",
-  "foreman_cif.mp4",
   "galleon_422_ntsc.mp4",
   "garden_sif.mp4",
   "grandma_qcif.mp4",
