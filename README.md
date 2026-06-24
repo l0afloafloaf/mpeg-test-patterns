@@ -8,18 +8,18 @@ Viewed best in full screen on a desktop browser and waiting a while to see what 
 
 ---
 
-This is an experiment in display and following an interest in standards, compression and image into data. Videos tile larger based on chance and videos repeat and loop based on incremental chance. 
+This is an experiment in display and following an interest in standards, compression and image into data. Videos tile larger based on chance and videos repeat, loop and change playback speed based on exponential chance. 
 
 Most video files have been sourced from xiph: https://media.xiph.org/video/derf/
 
-I am particularly interested in a couple of the clips such as "[flower_garden](https://github.com/l0afloafloaf/mpeg-test-patterns/blob/main/videos/flower_garden_422_ntsc.mp4)" and "[tennis](https://github.com/l0afloafloaf/mpeg-test-patterns/blob/main/videos/tt_sif.mp4)" (as well as [their](https://github.com/l0afloafloaf/mpeg-test-patterns/blob/main/videos/garden_sif.mp4) [descendents](https://github.com/l0afloafloaf/mpeg-test-patterns/blob/main/videos/tennis_sif.mp4)) as, [according to Leonardo Chiariglione](https://ride.chiariglione.org/the-first-mpeg-project/), these were some of the earliest test clips used in the development of MPEG-1 in the late 1980s. 
+I have particular interest in a couple of the clips, being "[flower_garden](https://github.com/l0afloafloaf/mpeg-test-patterns/blob/main/videos/flower_garden_422_ntsc.mp4)" and "[tennis](https://github.com/l0afloafloaf/mpeg-test-patterns/blob/main/videos/tt_sif.mp4)" (as well as [their](https://github.com/l0afloafloaf/mpeg-test-patterns/blob/main/videos/garden_sif.mp4) [descendents](https://github.com/l0afloafloaf/mpeg-test-patterns/blob/main/videos/tennis_sif.mp4)) as, [according to Leonardo Chiariglione](https://ride.chiariglione.org/the-first-mpeg-project/), these were some of the earliest test clips used in the development of MPEG-1 in the late 1980s. 
 
 #### Improvements/additions
 
 ##### General
 
 * [ ] prioritise certain clips in the pool (either algorithmically, or introducing recompressed duplicates)
-  * this has been partly addressed with an offline iteration using a 'shortlist.js' file, but could be expanded by making multiple 'versions', and publishing here
+  * this has been partly addressed with an offline iteration using a trimmed JS file of less clips, but could be expanded by making multiple 'versions', and publishing these versions here
   * still need to edit out less 'interesting' clips from shortlist and ensure any copyright requirements are being followed
 * [ ] Expand the pool or look at an iteration which focuses on 'test patterns', which, despite the title of this project, don't appear here
 * [ ] Spill this across multiple displays/screens
