@@ -92,25 +92,26 @@
             // Playback Speed Configuration
             enableVariableSpeeds: true,       
             
-            // SKEW DIALS: Higher numbers = stronger preference for target speed
-            normalTileSkewExponent: 3.0,
-            nineCellTileSkewExponent: 2.0,
-            echoCurve: 0.2,
+            // SKEW DIALS
+            normalTileSkewExponent: 3.0, // Higher skews towards 1x speed
+            nineCellTileSkewExponent: 2.0, // Higher skews towards .5x speed
+            echoCurve: 1.5, // lower skews towards full takeover
             
             // Core Probability Modifiers (values between 0.0 and 1.0)
-            echoTakeoverChance: 0.9,         
+            echoTakeoverChance: 0.5,         
             giantLayoutChance: 0.7,          
             nineCellTakeoverChance: 0.05,      
                         
-            echoMinPercent: 0.5,             
+            echoMinPercent: 0.6,             
             echoMaxPercent: 1.00,             
             
             loopDurationCutoffSeconds: 5.0,   
             loopProbabilities: {
-                play2: 0.80,                  
-                play3: 0.70,                  
-                play4: 0.60,                  
-                play5: 0.50                   
+                play2: 0.90,                  
+                play3: 0.80,                  
+                play4: 0.70,                  
+                play5: 0.60,
+                play6: 0.50,  
             }
         };
 
@@ -177,7 +178,8 @@
                     if (loopCounter === 1 && Math.random() < probs.play2) shouldLoop = true; 
                     else if (loopCounter === 2 && Math.random() < probs.play3) shouldLoop = true; 
                     else if (loopCounter === 3 && Math.random() < probs.play4) shouldLoop = true; 
-                    else if (loopCounter === 4 && Math.random() < probs.play5) shouldLoop = true; 
+                    else if (loopCounter === 4 && Math.random() < probs.play5) shouldLoop = true;
+                    else if (loopCounter === 5 && Math.random() < probs.play6) shouldLoop = true; 
 
                     if (shouldLoop) {
                         loopCounter++;
