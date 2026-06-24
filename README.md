@@ -8,11 +8,11 @@ Viewed best in full screen on a desktop browser and waiting a while to see what 
 
 ---
 
-This is an experiment in display and following an interest in standards, compression and image into data. It is entirely vibe coded. Videos tile larger based on chance and videos repeat and loop based on incremental chance. 
+This is an experiment in display and following an interest in standards, compression and image into data. Videos tile larger based on chance and videos repeat and loop based on incremental chance. 
 
 Most video files have been sourced from xiph: https://media.xiph.org/video/derf/
 
-I am particularly interested in a couple of the clips such as "flower_garden" and "tennis" (and their descendents) as, according to Leonardo Chiariglione's history on the subject, they were the initial two test clips chosen for the development of MPEG-1 in the late 1980s: https://ride.chiariglione.org/the-first-mpeg-project/
+I am particularly interested in a couple of the clips such as "[flower_garden](https://github.com/l0afloafloaf/mpeg-test-patterns/blob/main/videos/flower_garden_422_ntsc.mp4)" and "[tennis](https://github.com/l0afloafloaf/mpeg-test-patterns/blob/main/videos/tt_sif.mp4)" (as well as [their](https://github.com/l0afloafloaf/mpeg-test-patterns/blob/main/videos/garden_sif.mp4) [descendents](https://github.com/l0afloafloaf/mpeg-test-patterns/blob/main/videos/tennis_sif.mp4)) as, [according to Leonardo Chiariglione](https://ride.chiariglione.org/the-first-mpeg-project/), these were some of the earliest test clips used in the development of MPEG-1 in the late 1980s. 
 
 #### Improvements/additions
 
@@ -20,7 +20,7 @@ I am particularly interested in a couple of the clips such as "flower_garden" an
 
 * [ ] prioritise certain clips in the pool (either algorithmically, or introducing recompressed duplicates)
   * this has been partly addressed with an offline iteration using a 'shortlist.js' file, but could be expanded by making multiple 'versions', and publishing here
-  * still need to edit out less relevant clips from here and from shortlist and ensure any copyright requirements are being followed
+  * still need to edit out less 'interesting' clips from shortlist and ensure any copyright requirements are being followed
 * [ ] Expand the pool or look at an iteration which focuses on 'test patterns', which, despite the title of this project, don't appear here
 * [ ] Spill this across multiple displays/screens
 * [x] ~~Increase time dilation of clips~~ 24/06 version introduced exponential time functions 
@@ -36,9 +36,9 @@ I am particularly interested in a couple of the clips such as "flower_garden" an
    * [ ] clicking on a tile causes video to 'echo' across other tiles
    * [ ] clicking forces giant (2x2 tiles) or 9cell layout, or randomly cues other chance layout/speed operations
 
-Noting that any overlays should only appear with mouse movement, default appearance should be simply tiled videos
+Noting that any overlays should only appear with mouse movement, default appearance should stay as pure tiled videos
 
 #### Related Projects 
 
 * slideshow website/static page that cycles through the public flickr galleries of the SMPTE and ITU organisations.
-* return to 2023 project 'buffering', designing and animate my own loading symbol to place across content 
+* return to 2023 project 'buffering', which involved designing and animate my own loading symbol as a device to lay across videos and play with videos that, in an installation setting, give the impression of 'lag' 
