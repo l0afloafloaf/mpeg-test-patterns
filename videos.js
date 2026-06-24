@@ -24,7 +24,6 @@ const videoSourcePool = [
   "ice_4cif.mp4",
   "intros_422_ntsc.mp4",
   "mad900_cif.mp4",
-  "miss_am_qcif.mp4",
   "mobile_calendar_422_ntsc.mp4",
   "mobile_cif.mp4",
   "mother_daughter_cif.mp4",
