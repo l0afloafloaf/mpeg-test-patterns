@@ -24,7 +24,6 @@ const videoSourcePool = [
   "hall_objects_qcif.mp4",
   "harbour_4cif.mp4",
   "highway_cif.mp4",
-  "husky_cif.mp4",
   "ice_4cif.mp4",
   "intros_422_ntsc.mp4",
   "mad900_cif.mp4",
@@ -33,7 +32,6 @@ const videoSourcePool = [
   "mobile_cif.mp4",
   "mother_daughter_cif.mp4",
   "mthr_dotr_qcif.mp4",
-  "news_cif.mp4",
   "pamphlet_cif.mp4",
   "paris_cif.mp4",
   "salesman_qcif.mp4",
@@ -48,7 +46,6 @@ const videoSourcePool = [
   "tennis_sif.mp4",
   "trevor_qcif.mp4",
   "tt_sif.mp4",
-  "vtc1nw_422_ntsc.mp4",
   "washdc_422_ntsc.mp4",
   "waterfall_cif.mp4",
 ];
