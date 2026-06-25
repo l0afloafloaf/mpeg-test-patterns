@@ -23,6 +23,7 @@ I have particular interest in a couple of the clips, being "[flower_garden](http
   * still need to edit out less 'interesting' clips from shortlist and ensure any copyright requirements are being followed
 * [ ] Expand the pool or look at an iteration which focuses on 'test patterns', which, despite the title of this project, don't appear here
 * [ ] Spill this across multiple displays/screens
+* [ ] Introduce additional probabilities/chaos over longer durations, eg, after 120 layout changes time dilation or echo increases or new footage gets introduced 
 * [x] ~~Increase time dilation of clips~~ 24/06 version introduced exponential time functions 
 * [x] ~~address the loop function, which doesn't seem to be behaving correctly~~
 
