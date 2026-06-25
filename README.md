@@ -20,10 +20,13 @@ I have particular interest in a couple of the clips, being "[flower_garden](http
 
 * [ ] prioritise certain clips in the pool (either algorithmically, or introducing recompressed duplicates)
   * this has been partly addressed with an offline iteration using a trimmed JS file of less clips, but could be expanded by making multiple 'versions', and publishing these versions here
-  * still need to edit out less 'interesting' clips from shortlist and ensure any copyright requirements are being followed
+  * some 'less interesting' clips have been trimmed from the 25/06 videos.js file. copyright of footage needs to be doublechecked 
 * [ ] Expand the pool or look at an iteration which focuses on 'test patterns', which, despite the title of this project, don't appear here
 * [ ] Spill this across multiple displays/screens
-* [ ] Introduce additional probabilities/chaos over longer durations, eg, after 120 layout changes time dilation or echo increases or new footage gets introduced 
+* [ ] Introduce additional probabilities/chaos over longer durations, say, after 120 layout changes:
+  * [ ] increased time dilation
+  * [ ] new echo behaviour(?)
+  * [ ] additional footage/remuxes introduced 
 * [x] ~~Increase time dilation of clips~~ 24/06 version introduced exponential time functions 
 * [x] ~~address the loop function, which doesn't seem to be behaving correctly~~
 
