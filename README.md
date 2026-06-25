@@ -23,10 +23,11 @@ I have particular interest in a couple of the clips, being "[flower_garden](http
   * some 'less interesting' clips have been trimmed from the 25/06 videos.js file. copyright of footage needs to be doublechecked 
 * [ ] Expand the pool or look at an iteration which focuses on 'test patterns', which, despite the title of this project, don't appear here
 * [ ] Spill this across multiple displays/screens
-* [ ] Introduce additional probabilities/chaos over longer durations, say, after 120 layout changes:
+* [ ] Introduce additional chaos/probabilities over extended durations, like, after 120 layout changes:
   * [ ] increased time dilation
   * [ ] new echo behaviour(?)
-  * [ ] additional footage/remuxes introduced 
+  * [ ] additional footage/remuxes introduced
+* [ ] Play with the 'blinking effect' apparent on web versions (where footage can take a second to load). This is desirable and could be baked in, with transition delay randomised between 0s-0.5s?
 * [x] ~~Increase time dilation of clips~~ 24/06 version introduced exponential time functions 
 * [x] ~~address the loop function, which doesn't seem to be behaving correctly~~
 
