@@ -20,7 +20,8 @@ I have particular interest in a couple of the clips, being "[flower_garden](http
 
 * [ ] prioritise certain clips in the pool (either algorithmically, or introducing recompressed duplicates)
   * this has been partly addressed with an offline iteration using a trimmed JS file of less clips, but could be expanded by making multiple 'versions', and publishing these versions here
-  * some 'less interesting' clips have been trimmed from the 25/06 videos.js file. copyright of footage needs to be doublechecked 
+  * some 'less interesting' clips have been trimmed from the 25/06 videos.js file. copyright of footage needs to be doublechecked
+  * [ ] probabilities could be mapped according to age, history or metadata of certain clips (older/more distributed clips could appear more frequently?) research needed to discover this information
 * [ ] Expand the pool or look at an iteration which focuses on 'test patterns', which, despite the title of this project, don't appear here
 * [ ] Spill this across multiple displays/screens
 * [ ] Introduce additional chaos/probabilities over extended durations, like, after 120 layout changes:
