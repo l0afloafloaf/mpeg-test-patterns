@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MPEG test patterns</title>
+    <script src="videos.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .collage-container {
+            width: 100vw;
+            height: 56.25vw;
+            max-height: 100vh;
+            max-width: 177.78vh;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            grid-auto-flow: dense;
+            gap: 4px;
+            padding: 4px;
+        }
+        .tile {
+            width: 100%;
+            height: 100%;
+            background: #111;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        
+        /* Giant 2x2 Layout Modifiers */
+        .tile.giant-2x2 {
+            grid-column: span 2;
+            grid-row: span 2;
+        }
+        
+        /* Giant 9x9 Left-Oriented Layout Modifiers */
+        .layout-9x9-left .tile.giant-9x9 {
+            grid-column: 1 / span 3;
+            grid-row: 1 / span 3;
+        }
+        .layout-9x9-left .tile.small-sidebar {
+            grid-column: 4;
+            grid-row: span 1;
+        }
+
+        /* Giant 9x9 Right-Oriented Layout Modifiers */
+        .layout-9x9-right .tile.giant-9x9 {
+            grid-column: 2 / span 3;
+            grid-row: 1 / span 3;
+        }
+        .layout-9x9-right .tile.small-sidebar {
+            grid-column: 1;
+            grid-row: span 1;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #000;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="collage-container" id="grid"></div>
+
+    <script>
+        // =========================================================================
+        // 🎛️ ARTWORK CONFIGURATION PANEL
+        // =========================================================================
+        const CONFIG = {
+            videoDirectory: 'videos/',       
+            maxTilesUniform: 12,              
+            triggerEveryXChanges: 12,
+            nextLayoutChance: 0.5, // After each 'giant' tile occurence, chance the layout reverts to uniform or performs another lottery roll. >0.5, more likely to revert to uniform, <0.5, more likely to roll lottery          
+            maxInitialOffsetSeconds: 5, 
+            
+            enableVariableSpeeds: true,       
+            
+            // TIME DILATION // Curve function. Numbers >1.0 tend towards 1.0x, decimals <1.0 tend towards 0.5x
+            Single1TimeDilation: 4.0,
+            Giant9TimeDilation: 0.5, 
+            
+            // ECHO 
+            echoCurve: 2, // >1 tends to toward echoMinPercent, <1 tend toward echoMaxPercent, 1 randomises
+            echoMinPercent: 0.4,             
+            echoMaxPercent: 1.00, 
+            
+            // CORE PROBABILITY MODIFIERS
+            echoTakeoverChance: 0.6,         
+            giant2x2LayoutChance: 0.6,     
+            giant9x9LayoutChance: 0.05, 
+
+            loopDurationCutoffSeconds: 5.0,   
+            loopProbabilities: {
+                play2: 0.90,                  
+                play3: 0.80,                  
+                play4: 0.70,                  
+                play5: 0.60,
+                play6: 0.50,  
+            }
+        };
+
+        // =========================================================================
+        // ⚙️ SYSTEM STATES & CONTROLLERS
+        // =========================================================================
+        const gridContainer = document.getElementById('grid');
+        let allTiles = []; 
+        let changeCounter = 0;
+        let currentLayoutType = 'SINGLE_1X1'; 
+        let pendingLayoutChange = null; 
+        
+        const VALID_2X2_POSITIONS = [
+            { col: '1 / span 2', row: '1 / span 2' },
+            { col: '2 / span 2', row: '1 / span 2' },
+            { col: '3 / span 2', row: '1 / span 2' },
+            { col: '1 / span 2', row: '2 / span 2' },
+            { col: '2 / span 2', row: '2 / span 2' },
+            { col: '3 / span 2', row: '2 / span 2' }
+        ];
+        let lastGiantPositionIndex = -1;
+
+        function getRandomVideo() {
+            const randomIndex = Math.floor(Math.random() * videoSourcePool.length);
+            return CONFIG.videoDirectory + videoSourcePool[randomIndex];
+        }
+
+        function assignRandomPlaybackSpeed(videoElement, forceSkewSlow = false) {
+            if (!CONFIG.enableVariableSpeeds) {
+                videoElement.playbackRate = 1.0;
+                return;
+            }
+            
+            const seed = Math.random();
+            let chosenSpeed;
+
+            if (forceSkewSlow) {
+                chosenSpeed = 0.5 + 0.5 * Math.pow(seed, 1 / CONFIG.Giant9TimeDilation);
+            } else {
+                chosenSpeed = 1.0 - 0.5 * Math.pow(seed, CONFIG.Single1TimeDilation);
+            }
+
+            videoElement.playbackRate = parseFloat(chosenSpeed.toFixed(2));
+        }
+
+        function createTileElement() {
+            const tile = document.createElement('div');
+            tile.className = 'tile';
+            
+            const video = document.createElement('video');
+            video.muted = true;
+            video.autoplay = true;
+            video.playsInline = true;
+            
+            video.src = getRandomVideo();
+            assignRandomPlaybackSpeed(video, false); 
+            
+            let loopCounter = 1;
+
+            video.addEventListener('loadedmetadata', function() {
+                const randomStart = Math.random() * Math.min(CONFIG.maxInitialOffsetSeconds, this.duration);
+                this.currentTime = randomStart;
+            }, { once: true });
+
+            video.addEventListener('ended', function() {
+                if (this.duration < CONFIG.loopDurationCutoffSeconds) {
+                    let shouldLoop = false;
+                    const probs = CONFIG.loopProbabilities;
+                    
+                    if (loopCounter === 1 && Math.random() < probs.play2) shouldLoop = true; 
+                    else if (loopCounter === 2 && Math.random() < probs.play3) shouldLoop = true; 
+                    else if (loopCounter === 3 && Math.random() < probs.play4) shouldLoop = true; 
+                    else if (loopCounter === 4 && Math.random() < probs.play5) shouldLoop = true;
+                    else if (loopCounter === 5 && Math.random() < probs.play6) shouldLoop = true; 
+
+                    if (shouldLoop) {
+                        loopCounter++;
+                        this.currentTime = 0; 
+                        this.play().catch(() => {});
+                        return; 
+                    }
+                }
+
+                loopCounter = 1;
+                const isGiantTile = tile.classList.contains('giant-2x2') || tile.classList.contains('giant-9x9');
+
+                if (tile.dataset.pendingEchoSrc) {
+                    this.src = tile.dataset.pendingEchoSrc;
+                    delete tile.dataset.pendingEchoSrc;
+                } else {
+                    this.src = getRandomVideo();
+                }
+                
+                assignRandomPlaybackSpeed(this, tile.classList.contains('giant-9x9'));
+                this.play().catch(e => console.log("Playback error:", e));
+
+                if (isGiantTile) {
+                    changeCounter = 0; 
+                    generateNextLayoutAction(); 
+                } else if (currentLayoutType === 'SINGLE_1X1') {
+                    changeCounter++;
+                    if (changeCounter >= CONFIG.triggerEveryXChanges) {
+                        changeCounter = 0; 
+                        generateNextLayoutAction(); 
+                    }
+                }
+
+                if (pendingLayoutChange) {
+                    executeQueuedLayout(pendingLayoutChange);
+                    pendingLayoutChange = null; 
+                }
+            });
+
+            tile.appendChild(video);
+            return tile;
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function rollStandardLottery() {
+            const roll = Math.random();
+            if (roll < CONFIG.giant9x9LayoutChance) {
+                return 'GIANT_9X9';
+            } else if (roll < CONFIG.giant9x9LayoutChance + CONFIG.giant2x2LayoutChance) {
+                return 'GIANT_2X2';
+            } else {
+                return 'SINGLE_1X1';
+            }
+        }
+
+        function triggerIndependentEcho() {
+            const echoSrc = getRandomVideo();
+            let tilesToEcho = [...allTiles];
+            shuffleArray(tilesToEcho);
+            
+            const randomCurve = Math.pow(Math.random(), CONFIG.echoCurve);
+            const chosenPercentage = CONFIG.echoMinPercent + randomCurve * (CONFIG.echoMaxPercent - CONFIG.echoMinPercent);
+            const targetCount = Math.floor(tilesToEcho.length * chosenPercentage);
+
+            tilesToEcho.forEach((tile, index) => {
+                if (index < targetCount) { 
+                    tile.dataset.pendingEchoSrc = echoSrc;
+                }
+            });
+        }
+
+        function generateNextLayoutAction() {
+            if (Math.random() < CONFIG.echoTakeoverChance) {
+                triggerIndependentEcho();
+            }
+
+            let nextLayout;
+            if (currentLayoutType === 'GIANT_2X2' || currentLayoutType === 'GIANT_9X9') {
+                if (Math.random() < CONFIG.nextLayoutChance) {
+                    nextLayout = 'SINGLE_1X1';
+                } else {
+                    nextLayout = rollStandardLottery();
+                }
+            } else {
+                nextLayout = rollStandardLottery();
+            }
+
+            pendingLayoutChange = { type: nextLayout };
+        }
+
+        function executeQueuedLayout(action) {
+            gridContainer.className = 'collage-container';
+            
+            allTiles.forEach(tile => {
+                tile.className = 'tile'; 
+                tile.style.display = 'flex';
+                tile.style.gridColumn = ''; 
+                tile.style.gridRow = '';    
+                const vid = tile.querySelector('video');
+                if (vid && vid.paused) vid.play().catch(() => {});
+            });
+
+            if (action.type === 'GIANT_9X9') {
+                const targetGiantTile = allTiles[0];
+                targetGiantTile.classList.add('giant-9x9');
+                lastGiantPositionIndex = -1;
+
+                const giantVid = targetGiantTile.querySelector('video');
+                if (giantVid) assignRandomPlaybackSpeed(giantVid, true);
+
+                let hiddenCount = 0;
+                let remainingTiles = [];
+
+                allTiles.forEach(tile => {
+                    if (tile !== targetGiantTile) {
+                        if (hiddenCount < 8) {
+                            tile.style.display = 'none';
+                            hiddenCount++;
+                        } else {
+                            tile.classList.add('small-sidebar');
+                            remainingTiles.push(tile); 
+                        }
+                    }
+                });
+
+                if (Math.random() < 0.5) {
+                    gridContainer.classList.add('layout-9x9-left');
+                    gridContainer.appendChild(targetGiantTile);
+                    remainingTiles.forEach(tile => gridContainer.appendChild(tile));
+                } else {
+                    gridContainer.classList.add('layout-9x9-right');
+                    remainingTiles.forEach(tile => gridContainer.appendChild(tile));
+                    gridContainer.appendChild(targetGiantTile);
+                }
+            } 
+            else if (action.type === 'GIANT_2X2') {
+                const targetGiantTile = allTiles[0];
+                targetGiantTile.classList.add('giant-2x2');
+
+                let positionIndex;
+                do {
+                    positionIndex = Math.floor(Math.random() * 6);
+                } while (positionIndex === lastGiantPositionIndex);
+                
+                lastGiantPositionIndex = positionIndex;
+
+                const coords = VALID_2X2_POSITIONS[positionIndex];
+                targetGiantTile.style.gridColumn = coords.col;
+                targetGiantTile.style.gridRow = coords.row;
+
+                shuffleArray(allTiles);
+                let hiddenCount = 0;
+                for (let i = 0; i < allTiles.length; i++) {
+                    if (allTiles[i] !== targetGiantTile) {
+                        if (hiddenCount < 3) {
+                            allTiles[i].style.display = 'none';
+                            hiddenCount++;
+                        }
+                    }
+                }
+
+                allTiles.forEach(tile => gridContainer.appendChild(tile));
+            } 
+            else if (action.type === 'SINGLE_1X1') {
+                lastGiantPositionIndex = -1;
+                shuffleArray(allTiles);
+                allTiles.forEach(tile => gridContainer.appendChild(tile));
+            }
+
+            currentLayoutType = action.type;
+        }
+
+        for (let i = 0; i < CONFIG.maxTilesUniform; i++) {
+            const tile = createTileElement();
+            allTiles.push(tile);
+            gridContainer.appendChild(tile);
+        }
+    </script>
+</body>
+</html>
