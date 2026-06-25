@@ -71,7 +71,7 @@
         video {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
             background: #000;
         }
     </style>
@@ -88,7 +88,7 @@
             videoDirectory: 'videos/',       
             maxTilesUniform: 12,              
             triggerEveryXChanges: 12,
-            nextLayoutChance: 0.5, // After each 'giant' tile occurence, chance the layout reverts to uniform or performs another lottery roll. >0.5, more likely to revert to uniform, <0.5, more likely to roll lottery          
+            nextLayoutChance: 0.4, // After each 'giant' tile occurence, chance the layout reverts to uniform or performs another lottery roll. >0.5, more likely to revert to uniform, <0.5, more likely to roll lottery          
             maxInitialOffsetSeconds: 5, 
             
             enableVariableSpeeds: true,       
@@ -104,7 +104,7 @@
             
             // CORE PROBABILITY MODIFIERS
             echoTakeoverChance: 0.6,         
-            giant2x2LayoutChance: 0.6,     
+            giant2x2LayoutChance: 0.5,     
             giant9x9LayoutChance: 0.05, 
 
             loopDurationCutoffSeconds: 5.0,   
