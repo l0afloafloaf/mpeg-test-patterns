@@ -107,14 +107,10 @@
             giant2x2LayoutChance: 0.5,     
             giant9x9LayoutChance: 0.05, 
 
-            loopDurationCutoffSeconds: 5.0,   
-            loopProbabilities: {
-                play2: 0.90,                  
-                play3: 0.80,                  
-                play4: 0.70,                  
-                play5: 0.60,
-                play6: 0.50,  
-            }
+            loopDurationCutoffSeconds: 5.0,
+            maxRepeats: 10,             // Total maximum plays allowed per video
+            loopStartProbability: 0.90, // Probability for the 2nd play (play2)
+            loopLinearDecay: 0.10       // How much the probability drops with each subsequent loop
         };
 
         // =========================================================================
@@ -179,26 +175,19 @@
             }, { once: true });
 
             video.addEventListener('ended', function() {
-                if (this.duration < CONFIG.loopDurationCutoffSeconds) {
-                    let shouldLoop = false;
-                    const probs = CONFIG.loopProbabilities;
-                    
-                    if (loopCounter === 1 && Math.random() < probs.play2) shouldLoop = true; 
-                    else if (loopCounter === 2 && Math.random() < probs.play3) shouldLoop = true; 
-                    else if (loopCounter === 3 && Math.random() < probs.play4) shouldLoop = true; 
-                    else if (loopCounter === 4 && Math.random() < probs.play5) shouldLoop = true;
-                    else if (loopCounter === 5 && Math.random() < probs.play6) shouldLoop = true; 
+                if (this.duration < CONFIG.loopDurationCutoffSeconds && loopCounter < CONFIG.maxRepeats) {
+                    const currentProb = CONFIG.loopStartProbability - (loopCounter - 1) * CONFIG.loopLinearDecay;
 
-                    if (shouldLoop) {
+                    if (Math.random() < currentProb) {
                         loopCounter++;
-                        this.currentTime = 0; 
+                        this.currentTime = 0;
                         this.play().catch(() => {});
-                        return; 
+                        return;
+                      }
                     }
-                }
-
                 loopCounter = 1;
-                const isGiantTile = tile.classList.contains('giant-2x2') || tile.classList.contains('giant-9x9');
+                
+    const isGiantTile = tile.classList.contains('giant-2x2') || tile.classList.contains('giant-9x9');
 
                 if (tile.dataset.pendingEchoSrc) {
                     this.src = tile.dataset.pendingEchoSrc;
