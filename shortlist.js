@@ -1,0 +1,15 @@
+const videoSourcePool = [
+  "flower_cif.mp4",
+  "flower_garden_422_ntsc.mp4",
+  "garden_sif.mp4",
+  "highway_cif.mp4",
+  "intros_422_ntsc.mp4",
+  "mobile_calendar_422_ntsc.mp4",
+  "mobile_cif.mp4",
+  "tempete_cif.mp4",
+  "suzie_qcif.mp4",  
+  "tennis_sif.mp4",
+  "tt_sif.mp4",
+  "washdc_422_ntsc.mp4",
+  "waterfall_cif.mp4",
+];
