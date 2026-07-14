@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MPEG test patterns</title>
+    <script src="shortlist.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .collage-container {
+            width: 100vw;
+            height: 56.25vw;
+            max-height: 100vh;
+            max-width: 177.78vh;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            grid-auto-flow: dense;
+            gap: 6px;
+            padding: 6px;
+        }
+        .tile {
+            width: 100%;
+            height: 100%;
+            background: #111;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        
+        /* Giant 2x2 Layout Modifiers */
+        .tile.giant-2x2 {
+            grid-column: span 2;
+            grid-row: span 2;
+        }
+        
+        /* Giant 9x9 Left-Oriented Layout Modifiers */
+        .layout-9x9-left .tile.giant-9x9 {
+            grid-column: 1 / span 3;
+            grid-row: 1 / span 3;
+        }
+        .layout-9x9-left .tile.small-sidebar {
+            grid-column: 4;
+            grid-row: span 1;
+        }
+
+        /* Giant 9x9 Right-Oriented Layout Modifiers */
+        .layout-9x9-right .tile.giant-9x9 {
+            grid-column: 2 / span 3;
+            grid-row: 1 / span 3;
+        }
+        .layout-9x9-right .tile.small-sidebar {
+            grid-column: 1;
+            grid-row: span 1;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #000;
+            transition: opacity 0.1s ease-in-out; /* Custom 0.1s opacity adjustment preserved */
+        }
+
+        /* 🖥️ FULLSCREEN CONTROL BUTTON STYLING */
+        .fullscreen-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            background: rgba(0, 0, 0, 0.1);
+            border: none;
+            color: #fff;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            opacity: 0;
+            pointer-events: none; 
+            transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(2px);
+        }
+        .fullscreen-btn.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .fullscreen-btn:hover {
+            background: rgba(0, 0, 0, 0.85);
+        }
+        .fullscreen-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+        
+        /* iframe Transparency Classes */
+        html.embedded,
+        html.embedded body,
+        html.embedded .tile,
+        html.embedded video {
+            background: transparent !important;
+            background-color: transparent !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="collage-container" id="grid"></div>
+
+    <button id="fullscreen-btn" class="fullscreen-btn" title="Toggle Fullscreen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+    </button>
+
+    <script>
+        // =========================================================================
+        // 🎛️ ARTWORK CONFIGURATION PANEL
+        // =========================================================================
+        const CONFIG = {
+            videoDirectory: 'videos/',       
+            maxTilesUniform: 12,              
+            maxInitialOffsetSeconds: 5, 
+            enableVariableSpeeds: true,      
+            
+            triggerEveryXChanges: 12,
+            nextLayoutChance: 0.3, // After 'giant' tile . >0.5, tends to uniform, <0.5, tends to lottery   
+            chaosCycleInterval: 120,    // Mutate parameters every X layout changes
+            grandCycleInterval: 2400,   // Full system restore to original settings 
+            
+            // PLAYBACK SPEEDS
+            minSpeed: 0.4,
+            maxSpeed: 1.0,
+            
+            // TIME DILATION // Curve function. Numbers >1.0 tend towards 1.0x, decimals <1.0 tend towards 0.5x
+            Single1TimeDilation: 4.0,
+            Giant9TimeDilation: 0.5, 
+        
+            // CORE PROBABILITY MODIFIERS
+            echoTakeoverChance: 0.5,         
+            giant2x2LayoutChance: 0.05,     
+            giant9x9LayoutChance: 0.02, 
+            ghostTakeoverChance: 0.05,       // Layout level wave event occurrence rate
+            
+            // ECHO PARAMETERS - if echoTakeover occurs, how many tiles will be occupied?
+            echoCurve: 2, // >1 tends to toward echoMinPercent, <1 tend toward echoMaxPercent, 1 randomises
+            echoMinPercent: 0.4,             
+            echoMaxPercent: 1.00, 
+        
+            // UNIFIED GHOST & DELAY PARAMETERS (Now fully managed by the Chaos Engine)
+            ghostDelayChance: 0.15,          // 35% baseline chance an individual tile experiences a delay calculation
+            ghostDelayCurve: 8,            // Higher numbers skew toward 0.1s fast entries. Low decimals skew long.
+            minGhostDelaySeconds: 0.1,       // Quickest possible delay step
+            maxGhostDelaySeconds: 3.0,       // Furthest possible ceiling for a delayed loop
+            ghostCutoffSeconds: 2.5,         // Delays that land past 2.0s turn the tile into a permanent dark ghost
+        
+            // GHOST WAVE (ECHO) PARAMETERS - layout level mass spatial infection
+            ghostEchoCurve: 2,            
+            ghostEchoMinPercent: 0.20,      
+            ghostEchoMaxPercent: 0.70,      
+        
+            // LOOPS (how short and how often)
+            loopDurationCutoffSeconds: 5.0,
+            maxRepeats: 10,             // Total maximum plays allowed per video
+            loopStartProbability: 0.90, // Probability for the 2nd play (play2)
+            loopLinearDecay: 0.10       // How much the probability drops with each subsequent loop           
+        };
+                        
+        // Deep copy clone to preserve original states for the Grand Cycle reset
+        const INITIAL_CONFIG = JSON.parse(JSON.stringify(CONFIG));
+        
+        // Detects if "?transparent=true" is added to the URL string
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('transparent') === 'true') {
+            document.documentElement.classList.add('embedded');
+        }
+        
+        // =========================================================================
+        // ⚙️ SYSTEM STATES & CONTROLLERS
+        // =========================================================================
+        const gridContainer = document.getElementById('grid');
+        let allTiles = []; 
+        let changeCounter = 0;
+        let currentLayoutType = 'SINGLE_1X1'; 
+        let pendingLayoutChange = null; 
+        
+        const VALID_2X2_POSITIONS = [
+            { col: '1 / span 2', row: '1 / span 2' },
+            { col: '2 / span 2', row: '1 / span 2' },
+            { col: '3 / span 2', row: '1 / span 2' },
+            { col: '1 / span 2', row: '2 / span 2' },
+            { col: '2 / span 2', row: '2 / span 2' },
+            { col: '3 / span 2', row: '2 / span 2' }
+        ];
+        let lastGiantPositionIndex = -1;
+
+        function getRandomVideo() {
+            const randomIndex = Math.floor(Math.random() * videoSourcePool.length);
+            return CONFIG.videoDirectory + videoSourcePool[randomIndex];
+        }
+
+        function assignRandomPlaybackSpeed(videoElement, forceSkewSlow = false) {
+            if (!CONFIG.enableVariableSpeeds) {
+                videoElement.playbackRate = 1.0;
+                return;
+            }
+            
+            const seed = Math.random();
+            let chosenSpeed;
+            const speedRange = CONFIG.maxSpeed - CONFIG.minSpeed;
+
+            if (forceSkewSlow) {
+                chosenSpeed = CONFIG.minSpeed + speedRange * Math.pow(seed, 1 / CONFIG.Giant9TimeDilation);
+            } else {
+                chosenSpeed = CONFIG.maxSpeed - speedRange * Math.pow(seed, CONFIG.Single1TimeDilation);
+            }
+
+            videoElement.playbackRate = parseFloat(chosenSpeed.toFixed(2));
+        }
+
+        // 🧠 THE UNIFIED GHOST AND DELAY MANAGEMENT LOADER
+        function handleVideoAppearance(videoElement, forceGhostEcho = false) {
+            // Cancel any previously scheduled timers to avoid overlay frame conflicts
+            if (videoElement.dataset.appearanceTimeoutId) {
+                clearTimeout(parseInt(videoElement.dataset.appearanceTimeoutId));
+                videoElement.removeAttribute('data-appearance-timeout-id');
+            }
+        
+            const tile = videoElement.parentElement;
+            const isGiant = tile && (tile.classList.contains('giant-2x2') || tile.classList.contains('giant-9x9'));
+        
+            // Central focal points remain exempt from visual breakdown routines to preserve layout clarity
+            if (isGiant) {
+                videoElement.style.opacity = '1';
+                return;
+            }
+        
+            // Check if this individual tile falls into the visibility calculation profile
+            let shouldEvaluate = Math.random() < CONFIG.ghostDelayChance;
+            
+            // If flagged by a layout-wide Ghost Echo wave, force it into the pipeline automatically
+            if (forceGhostEcho) {
+                shouldEvaluate = true;
+            }
+        
+            if (shouldEvaluate) {
+                // If infected specifically by a layout wave, drop it to pitch black immediately as a pure layout spillover
+                if (forceGhostEcho) {
+                    videoElement.style.opacity = '0';
+                    return;
+                }
+        
+                // Curve-based delay assignment equation
+                const seed = Math.random();
+                const calculatedDelay = CONFIG.minGhostDelaySeconds + 
+                    Math.pow(seed, CONFIG.ghostDelayCurve) * (CONFIG.maxGhostDelaySeconds - CONFIG.minGhostDelaySeconds);
+        
+                // Timeline evaluation: check if delay crosses the absolute cutoff boundary
+                if (calculatedDelay > CONFIG.ghostCutoffSeconds) {
+                    // Cutoff Exceeded: tile registers as an absolute structural ghost for this asset duration
+                    videoElement.style.opacity = '0';
+                } else {
+                    // Under Boundary: tile processes as an organic delayed visual entry
+                    videoElement.style.opacity = '0';
+                    const timeoutId = setTimeout(() => {
+                        videoElement.style.opacity = '1';
+                    }, calculatedDelay * 1000);
+                    videoElement.dataset.appearanceTimeoutId = timeoutId;
+                }
+            } else {
+                // Instantly visible baseline execution path
+                videoElement.style.opacity = '1';
+            }
+        }
+
+        function createTileElement() {
+            const tile = document.createElement('div');
+            tile.className = 'tile';
+            
+            const video = document.createElement('video');
+            video.muted = true;
+            video.autoplay = true;
+            video.playsInline = true;
+            
+            video.src = getRandomVideo();
+            assignRandomPlaybackSpeed(video, false); 
+            
+            let loopCounter = 1;
+
+            tile.appendChild(video);
+            handleVideoAppearance(video);
+
+            video.addEventListener('loadedmetadata', function() {
+                const randomStart = Math.random() * Math.min(CONFIG.maxInitialOffsetSeconds, this.duration);
+                this.currentTime = randomStart;
+            }, { once: true });
+
+            video.addEventListener('ended', function() {
+                if (this.duration < CONFIG.loopDurationCutoffSeconds && loopCounter < CONFIG.maxRepeats) { 
+                    const currentProb = CONFIG.loopStartProbability - (loopCounter - 1) * CONFIG.loopLinearDecay; 
+        
+                    if (Math.random() < currentProb) { 
+                        loopCounter++;
+                        this.currentTime = 0;
+                        this.play().catch(() => {});
+                        return;
+                    }
+                }
+                loopCounter = 1;
+                
+                const isGiantTile = tile.classList.contains('giant-2x2') || tile.classList.contains('giant-9x9'); 
+        
+                if (tile.dataset.pendingEchoSrc) { 
+                    this.src = tile.dataset.pendingEchoSrc;
+                    delete tile.dataset.pendingEchoSrc;
+                } else {
+                    this.src = getRandomVideo(); 
+                }
+                
+                // Track layout-driven mass spillover markings
+                let forceGhostEcho = false;
+                if (tile.dataset.pendingGhost) {
+                    forceGhostEcho = true;
+                    delete tile.dataset.pendingGhost;
+                }
+        
+                assignRandomPlaybackSpeed(this, tile.classList.contains('giant-9x9')); 
+                handleVideoAppearance(this, forceGhostEcho);
+                this.play().catch(e => console.log("Playback error:", e)); 
+        
+                if (isGiantTile) { 
+                    changeCounter = 0; 
+                    generateNextLayoutAction(); 
+                } else if (currentLayoutType === 'SINGLE_1X1') { 
+                    changeCounter++;
+                    if (changeCounter >= CONFIG.triggerEveryXChanges) { 
+                        changeCounter = 0; 
+                        generateNextLayoutAction(); 
+                    }
+                }
+        
+                if (pendingLayoutChange) { 
+                    executeQueuedLayout(pendingLayoutChange);
+                    pendingLayoutChange = null; 
+                }
+            });
+            return tile;
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function rollStandardLottery() {
+            const roll = Math.random();
+            if (roll < CONFIG.giant9x9LayoutChance) {
+                return 'GIANT_9X9';
+            } else if (roll < CONFIG.giant9x9LayoutChance + CONFIG.giant2x2LayoutChance) {
+                return 'GIANT_2X2';
+            } else {
+                return 'SINGLE_1X1';
+            }
+        }
+
+        function triggerIndependentEcho() {
+            const echoSrc = getRandomVideo();
+            let tilesToEcho = [...allTiles];
+            shuffleArray(tilesToEcho);
+            
+            const randomCurve = Math.pow(Math.random(), CONFIG.echoCurve);
+            const chosenPercentage = CONFIG.echoMinPercent + randomCurve * (CONFIG.echoMaxPercent - CONFIG.echoMinPercent);
+            const targetCount = Math.floor(tilesToEcho.length * chosenPercentage);
+
+            tilesToEcho.forEach((tile, index) => {
+                if (index < targetCount) { 
+                    tile.dataset.pendingEchoSrc = echoSrc;
+                }
+            });
+        }
+
+        // Layout level trigger that infects clusters of tiles simultaneously on structural adjustment
+        function triggerGhostEcho() {
+            let tilesToGhost = [...allTiles];
+            shuffleArray(tilesToGhost);
+            
+            const randomCurve = Math.pow(Math.random(), CONFIG.ghostEchoCurve);
+            const chosenPercentage = CONFIG.ghostEchoMinPercent + randomCurve * (CONFIG.ghostEchoMaxPercent - CONFIG.ghostEchoMinPercent);
+            const targetCount = Math.floor(tilesToGhost.length * chosenPercentage);
+        
+            tilesToGhost.forEach((tile, index) => {
+                if (index < targetCount) { 
+                    tile.dataset.pendingGhost = "true";
+                }
+            });
+        }
+        
+        function generateNextLayoutAction() {
+            if (Math.random() < CONFIG.echoTakeoverChance) { 
+                triggerIndependentEcho(); 
+            }
+            if (Math.random() < CONFIG.ghostTakeoverChance) {
+                triggerGhostEcho();
+            }
+        
+            let nextLayout; 
+            if (currentLayoutType === 'GIANT_2X2' || currentLayoutType === 'GIANT_9X9') { 
+                if (Math.random() < CONFIG.nextLayoutChance) { 
+                    nextLayout = 'SINGLE_1X1'; 
+                } else {
+                    nextLayout = rollStandardLottery(); 
+                }
+            } else {
+                nextLayout = rollStandardLottery(); 
+            }
+        
+            pendingLayoutChange = { type: nextLayout }; 
+        }
+
+        // =========================================================================
+        // 🌀 CHAOS ENGINE STATES & ENGINE MUTATORS
+        // =========================================================================
+        let totalLayoutChanges = 0;
+        let chaosCycleCount = 0;
+        
+        function divergeValue(baseline, min, max, intensity) {
+          const rawRandomRoll = Math.random() * (max - min) + min;
+          return baseline + (rawRandomRoll - baseline) * intensity;
+        }
+        
+        function applyChaosMutation() {
+          chaosCycleCount++;
+          
+          const maxCyclesBeforeReset = CONFIG.grandCycleInterval / CONFIG.chaosCycleInterval; 
+          const intensity = Math.pow(chaosCycleCount / maxCyclesBeforeReset, 2); 
+        
+          console.log(`--- 🌀 Chaos Cycle #${chaosCycleCount} Triggered (Intensity: ${(intensity * 100).toFixed(1)}%) ---`); 
+        
+          // 1. CORE PROBABILITY MODIFIERS (Diverges violently outwards later on)
+          CONFIG.echoTakeoverChance   = divergeValue(INITIAL_CONFIG.echoTakeoverChance, 0.05, 0.95, intensity); 
+          CONFIG.giant2x2LayoutChance = divergeValue(INITIAL_CONFIG.giant2x2LayoutChance, 0.05, 0.75, intensity); 
+          CONFIG.giant9x9LayoutChance = divergeValue(INITIAL_CONFIG.giant9x9LayoutChance, 0.05, 0.30, intensity); 
+          CONFIG.ghostTakeoverChance  = divergeValue(INITIAL_CONFIG.ghostTakeoverChance, 0.02, 0.65, intensity);  
+          CONFIG.ghostDelayChance     = divergeValue(INITIAL_CONFIG.ghostDelayChance, 0.10, 0.75, intensity); // Mutates base activation rates
+        
+          // 2. THE CONVERGENCE (Linear decay countdown pulling profiles down toward lower floor floats)
+          CONFIG.echoCurve = INITIAL_CONFIG.echoCurve - (INITIAL_CONFIG.echoCurve - 0.2) * (chaosCycleCount / maxCyclesBeforeReset); 
+          CONFIG.ghostEchoCurve = INITIAL_CONFIG.ghostEchoCurve - (INITIAL_CONFIG.ghostEchoCurve - 0.1) * (chaosCycleCount / maxCyclesBeforeReset); 
+          CONFIG.Single1TimeDilation = INITIAL_CONFIG.Single1TimeDilation - (INITIAL_CONFIG.Single1TimeDilation - 0.5) * (chaosCycleCount / maxCyclesBeforeReset); 
+          
+          // 🧠 SHIFT THE GHOST TIMELINE CURVE DOWN
+          // Moving from 3.5 down toward 0.3. This forces calculations to skew toward maximum numbers,
+          // instantly pushing delays beyond the 2.0s boundary to cause deep visual structural dropouts.
+          CONFIG.ghostDelayCurve = INITIAL_CONFIG.ghostDelayCurve - (INITIAL_CONFIG.ghostDelayCurve - 0.3) * (chaosCycleCount / maxCyclesBeforeReset);
+        
+          // 3. VARIABLE SPEEDS EXTENSION
+          CONFIG.minSpeed = Math.max(0.2, CONFIG.minSpeed - 0.05); 
+        
+          // 4. LOOP INFECTION
+          CONFIG.maxRepeats += 2; 
+          CONFIG.loopLinearDecay = Math.max(0.01, CONFIG.loopLinearDecay - 0.01); 
+        
+          console.log("Updated Config Profile:", {
+            echoTakeover: CONFIG.echoTakeoverChance.toFixed(2),
+            ghostTakeover: CONFIG.ghostTakeoverChance.toFixed(2),
+            ghostDelayChance: CONFIG.ghostDelayChance.toFixed(2),
+            ghostDelayCurve: CONFIG.ghostDelayCurve.toFixed(2),
+            giant2x2: CONFIG.giant2x2LayoutChance.toFixed(2),
+            giant9x9: CONFIG.giant9x9LayoutChance.toFixed(2),
+            minSpeed: CONFIG.minSpeed.toFixed(2),
+            maxRepeats: CONFIG.maxRepeats
+          });
+        }        
+        
+        function resetGrandCycle() {
+          console.log("--- 🌌 chaos cycle complete, system resetting..");
+          Object.assign(CONFIG, JSON.parse(JSON.stringify(INITIAL_CONFIG)));
+          totalLayoutChanges = 0;
+          chaosCycleCount = 0;
+        }
+
+        function executeQueuedLayout(action) {
+          totalLayoutChanges++;
+          
+          if (totalLayoutChanges % CONFIG.grandCycleInterval === 0) {
+            resetGrandCycle();
+          } else if (totalLayoutChanges % CONFIG.chaosCycleInterval === 0) {
+            applyChaosMutation();
+          }
+        
+          gridContainer.className = 'collage-container';
+            
+            allTiles.forEach(tile => {
+                tile.className = 'tile'; 
+                tile.style.display = 'flex';
+                tile.style.gridColumn = ''; 
+                tile.style.gridRow = '';    
+                const vid = tile.querySelector('video');
+                if (vid && vid.paused) vid.play().catch(() => {});
+            });
+
+            if (action.type === 'GIANT_9X9') {
+                const targetGiantTile = allTiles[0];
+                targetGiantTile.classList.add('giant-9x9');
+                lastGiantPositionIndex = -1;
+
+                const giantVid = targetGiantTile.querySelector('video');
+                if (giantVid) {
+                    assignRandomPlaybackSpeed(giantVid, true);
+                    if (giantVid.dataset.appearanceTimeoutId) {
+                        clearTimeout(parseInt(giantVid.dataset.appearanceTimeoutId));
+                        giantVid.removeAttribute('data-appearance-timeout-id');
+                    }
+                    giantVid.style.opacity = '1';
+                }
+
+                let hiddenCount = 0;
+                let remainingTiles = [];
+
+                allTiles.forEach(tile => {
+                    if (tile !== targetGiantTile) {
+                        if (hiddenCount < 8) {
+                            tile.style.display = 'none';
+                            hiddenCount++;
+                        } else {
+                            tile.classList.add('small-sidebar');
+                            remainingTiles.push(tile); 
+                        }
+                    }
+                });
+
+                if (Math.random() < 0.5) {
+                    gridContainer.classList.add('layout-9x9-left');
+                    gridContainer.appendChild(targetGiantTile);
+                    remainingTiles.forEach(tile => gridContainer.appendChild(tile));
+                } else {
+                    gridContainer.classList.add('layout-9x9-right');
+                    remainingTiles.forEach(tile => gridContainer.appendChild(tile));
+                    gridContainer.appendChild(targetGiantTile);
+                }
+            } 
+            else if (action.type === 'GIANT_2X2') {
+                const targetGiantTile = allTiles[0];
+                targetGiantTile.classList.add('giant-2x2');
+
+                const giantVid = targetGiantTile.querySelector('video');
+                if (giantVid) {
+                    if (giantVid.dataset.appearanceTimeoutId) {
+                        clearTimeout(parseInt(giantVid.dataset.appearanceTimeoutId));
+                        giantVid.removeAttribute('data-appearance-timeout-id');
+                    }
+                    giantVid.style.opacity = '1';
+                }
+
+                let positionIndex;
+                do {
+                    positionIndex = Math.floor(Math.random() * 6);
+                } while (positionIndex === lastGiantPositionIndex);
+                
+                lastGiantPositionIndex = positionIndex;
+
+                const coords = VALID_2X2_POSITIONS[positionIndex];
+                targetGiantTile.style.gridColumn = coords.col;
+                targetGiantTile.style.gridRow = coords.row;
+
+                shuffleArray(allTiles);
+                let hiddenCount = 0;
+                for (let i = 0; i < allTiles.length; i++) {
+                    if (allTiles[i] !== targetGiantTile) {
+                        if (hiddenCount < 3) {
+                            allTiles[i].style.display = 'none';
+                            hiddenCount++;
+                        }
+                    }
+                }
+
+                allTiles.forEach(tile => gridContainer.appendChild(tile));
+            } 
+            else if (action.type === 'SINGLE_1X1') {
+                lastGiantPositionIndex = -1;
+                shuffleArray(allTiles);
+                allTiles.forEach(tile => gridContainer.appendChild(tile));
+            }
+
+            currentLayoutType = action.type;
+        }
+
+        // =========================================================================
+        // 🖥️ FULLSCREEN AND MOUSE MOVEMENT LOGIC
+        // =========================================================================
+        const fsBtn = document.getElementById('fullscreen-btn');
+        let mouseTimeout;
+
+        window.addEventListener('mousemove', () => {
+            fsBtn.classList.add('visible');
+            clearTimeout(mouseTimeout);
+            
+            mouseTimeout = setTimeout(() => {
+                if (!fsBtn.matches(':hover')) {
+                    fsBtn.classList.remove('visible');
+                }
+            }, 2500);
+        });
+
+        fsBtn.addEventListener('mouseenter', () => {
+            fsBtn.classList.add('visible');
+            clearTimeout(mouseTimeout);
+        });
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.error(`Error trying to enable fullscreen: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        fsBtn.addEventListener('click', toggleFullscreen);
+
+        document.addEventListener('fullscreenchange', () => {
+            if (document.fullscreenElement) {
+                fsBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="10" y1="14" x2="3" y2="21"></line></svg>`;
+            } else {
+                fsBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`;
+            }
+        });
+
+        // Initialize setup
+        for (let i = 0; i < CONFIG.maxTilesUniform; i++) {
+            const tile = createTileElement();
+            allTiles.push(tile);
+            gridContainer.appendChild(tile);
+        }
+    </script>
+</body>
+</html>
